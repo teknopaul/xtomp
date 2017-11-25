@@ -16,13 +16,6 @@ The core connection handling and event loop is provided by nginx. The STOMP prot
 * Subscription filters, enabling something akin to dynamically created topics.
 * nginx connection handling allows hundreds of thousands of connections with a single process.
 
-
-## utils
-
-* xtomp-tap - Utility to connect to a STOMP server and echo messages to stdout, optionally delimited by a user defined separator.
-* xtomp-sink - Utility to connect to a STOMP server and publish messages from stdin.
-* xtomp-drain - Utility to empty messages from a queue.
-
 # why xtomp?
 
 I am using RabbitMQ via its STOMP API.
@@ -46,4 +39,4 @@ ps aux on 64bit Ubuntu
 
 N.B.
 
-xtomp is not precicelyu an nginx module, it can't be run inside a running nginx instance becasue it only supports a single process, nginx supports many.
+xtomp is not precicely an nginx module, it can't be run inside a running nginx instance becasue it only supports a single process, nginx supports many.
