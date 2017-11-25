@@ -1,0 +1,50 @@
+.TH xtomp 8 "copyright teknopaul" xtomp "xtomp"
+           ▐
+.br
+        ▚▗▘▜▀ ▞▀▖▛▚▀▖▛▀▖
+.br
+        ▗▚ ▐ ▖▌ ▌▌▐ ▌▙▄▘
+.br
+        ▘ ▘ ▀ ▝▀ ▘▝ ▘▌
+.SH NAME
+xtomp - A STOMP Message Broker 👢
+.SH SYNOPSIS
+An in memory message broker daemon that supports queues and topics and exposes a STOMP API.
+.SH DESCRIPTION
+xtomp is a message broker based on nginx platform using event based approach that allows for 
+very little overhead when nothing is going on on the server and the ability to handle many concurrent connections with a single process.
+.PP
+.SH OPTIONS
+.B -v version
+print version and exit
+.PP
+.B -t test config
+load and validate the configuration but do not start the server
+.PP
+.B -c config
+Supply a configuration file other than the default.
+.PP
+.SH FILES
+.BL -tag -width indent
+.B /etc/xtomp.conf
+The main configuration file.
+.PP
+.B /var/log/xtomp/error.log
+Error log file.
+.PP
+.B /var/run/xtomp/xtomp.pid
+Contains the process ID of the xtomp master process.
+.PP
+.EL
+.SH EXIT STATUS
+Exit status is 0 on success, or 1 if the command fails.
+.SH COPYRIGHT
+Copyright (C) 2017 Teknopaul, Igor Sisoev, Nginx
+.SH AUTHOR
+.nf
+teknopaul@everywhere  
+  i.e. twitter, gmail, yahoo, irc, msn, facebook, github
+http://github.com/teknopaul
+http://tp23.org
+.fi
+

@@ -1,0 +1,19 @@
+
+#!/bin/bash
+
+cd $(dirname $0)
+
+args="--with-xtomp --without-http"
+opts="--prefix=/usr/local/xtomp
+        --sbin-path=/usr/local/xtomp/bin/xtomp
+        --modules-path=/usr/local/xtomp/modules
+        --conf-path=/usr/local/xtomp/conf/xtomp.conf
+        --error-log-path=/usr/local/xtomp/logs/error.log
+        --pid-path=/usr/local/xtomp/logs/xtomp.pid
+        --lock-path=/usr/local/xtomp/logs
+        --user=xtomp
+        --group=xtomp"
+
+auto/configure $args $opts
+
+

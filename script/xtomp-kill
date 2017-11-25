@@ -1,0 +1,19 @@
+#!/bin/bash -e
+#
+# Kill the xtomp deamon
+#
+
+pid_file=/var/run/xtomp/xtomp.pid
+
+if [ -f $pid ]
+then
+
+    parent_pid=$(cat $pid_file)
+    ps -p $parent_pid | grep xtomp
+    kill -9 $parent_pid $(ps --ppid $parent_pid -o pid=)
+
+else
+
+    exit 1
+
+fi

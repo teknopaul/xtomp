@@ -1,0 +1,15 @@
+[Unit]
+Description=STOMP Message Broker
+After=network.target
+
+[Service]
+Type=forking
+PIDFile=/run/xtomp/xtomp.pid
+ExecStartPre=/bin/mkdir -p /var/run/xtomp
+ExecStart=/usr/local/xtomp/bin/xtomp -g 'daemon on; master_process on;'
+ExecStop=-/sbin/start-stop-daemon --quiet --stop --retry QUIT/5 --pidfile /run/xtomp/xtomp.pid
+TimeoutStopSec=5
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target
