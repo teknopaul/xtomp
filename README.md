@@ -11,8 +11,8 @@ The core connection handling and event loop is provided by nginx. The STOMP prot
 
 * Low memory overhead.
 * Low CPU usage when idle.
-* memtop - in memory topic, (pub/sub)
-* memq - queueing messages in memory.
+* In memory topic, (pub/sub)
+* Queuing messages in memory.
 * Subscription filters, enabling something akin to dynamically created topics.
 * nginx connection handling allows hundreds of thousands of connections with a single process.
 
@@ -39,4 +39,10 @@ ps aux on 64bit Ubuntu
 
 N.B.
 
-xtomp is not precicely an nginx module, it can't be run inside a running nginx instance becasue it only supports a single process, nginx supports many.
+xtomp is not precisely an nginx module, it can't be run inside a running nginx instance because it only supports a single process, nginx supports many.
+
+nginx is modular so xtomp is able to removes the HTTP, SMTP and streaming code in nginx to keep the size down.
+
+## in memory
+
+Xtomp does not disk IO in its normal operations, hopefully it should thus be obvious that it gives no delivery guarantees.  There is no concept of durable subscribers or durable topics in xtomp.  By default there is some I: logs and a pid file. By providing tmpfs space for the pid file and either tmpfs space for logging or using syslog its possible to run xtomp without writing any file at all, this is interesting in the case of the raspberry pi where typically commodity SD cards are used for storage so avoiding writes is important.

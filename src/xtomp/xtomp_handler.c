@@ -22,6 +22,7 @@ static void xtomp_init_session(ngx_connection_t *c);
 /*
  * Set into ngx_listening_t->handler in xtomp_optimize_servers()
  */
+#pragma GCC diagnostic ignored "-Wcast-align"
 void
 xtomp_init_connection(ngx_connection_t *c)
 {

@@ -248,6 +248,7 @@ xtomp_headers_move(xtomp_message_t *m, xtomp_session_t *sess) {
 
 
 
+#pragma GCC diagnostic ignored "-Wcast-align"
 static ngx_int_t
 xtomp_headers_line(xtomp_session_t *sess, ngx_table_elt_t *h, ngx_uint_t offset)
 {

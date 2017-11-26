@@ -26,7 +26,6 @@ static ngx_int_t xtomp_auth_sha1cmp(ngx_str_t login, ngx_str_t passcode, ngx_str
 static ngx_int_t xtomp_auth_sha256cmp(ngx_str_t login, ngx_str_t passcode, ngx_str_t secret, ngx_uint_t secret_timeout);
 static ngx_int_t xtomp_auth_timeout(ngx_str_t login, ngx_uint_t secret_timeout);
 
-
 /**
  * auth with username & password
  *
