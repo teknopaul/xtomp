@@ -1,6 +1,7 @@
 xtomp (0.1) xenial; urgency=low
 
-   * This is my first Debian package.
+  * This is my first Debian package.
+  * This is my first Debian package.
 
-  -- teknopaul <me@teknopaul.com>  Sun, 10 Dec 2017 00:10:00 +0100
+ -- teknopaul <me@teknopaul.com>  Sun, 10 Dec 2017 00:10:00 +0100
 
