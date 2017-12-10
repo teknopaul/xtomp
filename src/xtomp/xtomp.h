@@ -58,7 +58,7 @@
 #define XTOMP_STOMP_PROTOCOL  0
 // change this and change the hardcoded strings in xtomp_response.c and version file
 #define XTOMP_VERSION_MAJOR   0
-#define XTOMP_VERSION_MINOR   1
+#define XTOMP_VERSION_MINOR   2
 
 
 // trusted port for admin type stuff

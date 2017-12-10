@@ -1,6 +1,10 @@
-#!/bin/bash
+#!/bin/bash -e
 
 cd $(dirname $0)
+
+. version
+
+
 
 args='--with-xtomp --without-http'
 opts='--prefix=/usr/local/xtomp
@@ -22,6 +26,8 @@ snapopts='--prefix=/usr/local/xtomp
         --lock-path=/var/snap/xtomp
         --user=xtomp
         --group=xtomp'
+
+deploy/fix-version.sh
 
 if [ $(hostname) == ci ] || [ "$1" == "prod" ]
 then

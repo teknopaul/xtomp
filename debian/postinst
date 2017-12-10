@@ -1,4 +1,5 @@
 #!/bin/sh
+#DEBHELPER#
 
 grep ^xtomp: /etc/group  >/dev/null || groupadd xtomp
 grep ^xtomp: /etc/passwd >/dev/null || useradd -g xtomp -M --no-user-group xtomp

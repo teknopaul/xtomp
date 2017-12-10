@@ -1,4 +1,5 @@
 #!/bin/sh
+#DEBHELPER#
 #
 # remove the xtomp user, not the group other debs might need it
 #

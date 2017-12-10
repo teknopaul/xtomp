@@ -27,8 +27,8 @@ static const char response_error_message[] = "ERROR\nmessage:%s\n\n\0";
 
 //WEBSOCKETS:
 static const char response_http_upgrade[] = "HTTP/1.1 101 Switching Protocols\nUpgrade:websocket\nConnection:Upgrade\nSec-WebSocket-Protocol:stomp\nSec-WebSocket-Accept:%s\n";
-static ngx_str_t response_http_500 = { 44 , (u_char *) "HTTP/1.1 500 Server Error\nserver:xtomp/0.1\n\n" };
-static ngx_str_t response_http_200 = { 135 , (u_char *) "HTTP/1.1 200 OK\nAccess-Control-Allow-Origin:*\nAccess-Control-Expose-Headers:server\nserver:xtomp/0.1\ncontent-length:0\nconnection:close\n\n" };
+static ngx_str_t response_http_500 = ngx_string("HTTP/1.1 500 Server Error\nserver:xtomp/0.2\n\n");
+static ngx_str_t response_http_200 = ngx_string("HTTP/1.1 200 OK\nAccess-Control-Allow-Origin:*\nAccess-Control-Expose-Headers:server\nserver:xtomp/0.2\ncontent-length:0\nconnection:close\n\n");
 
 static ngx_int_t
 xtomp_response_check_bufout_size(xtomp_session_t *s, ngx_connection_t *c, size_t len)
