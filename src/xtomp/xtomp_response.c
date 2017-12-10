@@ -18,7 +18,7 @@
 #define XTOMP_TERM_FRAME 1
 #define XTOMP_HDRS       0
 
-static const char response_connect_ack[] = "CONNECTED\nserver:xtomp/1.0\nversion:1.0\nsession:%ui\n";
+static const char response_connect_ack[] = "CONNECTED\nserver:xtomp/%ui.%ui\nversion:1.0\nsession:%ui\n";
 static const char response_message_ack[] = "RECEIPT\nreceipt-id:%V\n\n\0";
 static ngx_str_t response_error_general = { 24 , (u_char *) "ERROR\nmessage:general\n\n\0" };
 static ngx_str_t response_error_syntax =  { 23 , (u_char *) "ERROR\nmessage:syntax\n\n\0" };
@@ -27,8 +27,8 @@ static const char response_error_message[] = "ERROR\nmessage:%s\n\n\0";
 
 //WEBSOCKETS:
 static const char response_http_upgrade[] = "HTTP/1.1 101 Switching Protocols\nUpgrade:websocket\nConnection:Upgrade\nSec-WebSocket-Protocol:stomp\nSec-WebSocket-Accept:%s\n";
-static ngx_str_t response_http_500 = { 44 , (u_char *) "HTTP/1.1 500 Server Error\nserver:xtomp/1.0\n\n" };
-static ngx_str_t response_http_200 = { 68 , (u_char *) "HTTP/1.1 200 OK\nserver:xtomp/1.0\ncontent-length:0\nconnection:close\n\n" };
+static ngx_str_t response_http_500 = { 44 , (u_char *) "HTTP/1.1 500 Server Error\nserver:xtomp/0.1\n\n" };
+static ngx_str_t response_http_200 = { 135 , (u_char *) "HTTP/1.1 200 OK\nAccess-Control-Allow-Origin:*\nAccess-Control-Expose-Headers:server\nserver:xtomp/0.1\ncontent-length:0\nconnection:close\n\n" };
 
 static ngx_int_t
 xtomp_response_check_bufout_size(xtomp_session_t *s, ngx_connection_t *c, size_t len)
@@ -47,7 +47,7 @@ xtomp_response_check_bufout_size(xtomp_session_t *s, ngx_connection_t *c, size_t
 }
 
 /*
- * Create a message with a data buffer in it.
+ * Create a message with a data buffer in it of size client_bufout_size.
  * WARN: len is set to MAX buffersize but data is not cleared.
  */
 static xtomp_message_t *
@@ -134,7 +134,7 @@ xtomp_response_connect(xtomp_session_t *s, ngx_connection_t *c)
     buf = m->chunks->data[0]->data;
 
     // TODO horrible code just increment buf
-    rc = ngx_snprintf(buf, m->chunks->data[0]->len, response_connect_ack, s->id);
+    rc = ngx_snprintf(buf, m->chunks->data[0]->len, response_connect_ack, XTOMP_VERSION_MAJOR, XTOMP_VERSION_MINOR, s->id);
     len = rc - buf;
 
     len += xtomp_ecg_write_header(s, buf, len);

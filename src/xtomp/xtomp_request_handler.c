@@ -17,6 +17,7 @@
 
 static ngx_int_t xtomp_request_create_buffer(xtomp_session_t *sess, ngx_connection_t *c);
 static ngx_int_t xtomp_request_create_bufout(xtomp_session_t *sess, ngx_connection_t *c);
+static void xtomp_request_loop(xtomp_session_t *sess, ngx_event_t *rev);
 static void xtomp_request_reset_buffer_soft(xtomp_session_t *sess);
 static void xtomp_request_reset_buffer_hard(xtomp_session_t *sess);
 
@@ -79,7 +80,7 @@ xtomp_request_init_protocol(ngx_event_t *rev)
     c->log->action = "in init state";
 
     if ( rev->timedout ) {
-        ngx_log_error(NGX_LOG_INFO, c->log, NGX_ETIMEDOUT, "xtomp client init timed out");
+        ngx_log_error(NGX_LOG_INFO, c->log, NGX_ETIMEDOUT, "xtomp client init timeout");
         c->timedout = 1;
         xtomp_close_connection(c);
         return;
@@ -225,6 +226,7 @@ xtomp_request_process_commands(ngx_event_t *rev)
 
             case STOMP_COMMAND_CONNECT:
                 xtomp_request_connect(sess, c);
+                // TODO loop??
                 return;
 
             case STOMP_COMMAND_DISCONNECT:
@@ -243,22 +245,27 @@ xtomp_request_process_commands(ngx_event_t *rev)
 
             case STOMP_COMMAND_SUBSCRIBE:
                 xtomp_request_subscribe(sess, c);
+                xtomp_request_loop(sess, rev);
                 return;
 
             case STOMP_COMMAND_UNSUBSCRIBE:
                 xtomp_request_unsubscribe(sess, c);
+                xtomp_request_loop(sess, rev);
                 return;
 
             case STOMP_COMMAND_SEND:
                 xtomp_request_send(sess, c, rev);
+                // no loop we have to read data
                 return;
 
             case STOMP_COMMAND_ACK:
                 xtomp_request_ack(sess, c);
+                xtomp_request_loop(sess, rev);
                 return;
 
             case STOMP_COMMAND_NACK:
                 xtomp_request_nack(sess, c);
+                xtomp_request_loop(sess, rev);
                 return;
 
             case STOMP_COMMAND_DISCONNECT:
@@ -293,6 +300,18 @@ xtomp_request_process_commands(ngx_event_t *rev)
 
 }
 
+/**
+ * If we read and processed a whole command but there was still more data, i.e. two
+ * commands in the same buffer, we need to loop the read.
+ */
+static void
+xtomp_request_loop(xtomp_session_t *sess, ngx_event_t *rev)
+{
+    if ( sess->buffer->pos != sess->buffer->last ) {
+        ngx_log_debug0(NGX_LOG_DEBUG_XTOMP, sess->connection->log, 0, "pipelined loop");
+        xtomp_request_process_commands(rev);
+    }
+}
 /*
  * reset buffer to pos = start, loosing any buffered data
  */

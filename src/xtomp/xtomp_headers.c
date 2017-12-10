@@ -248,16 +248,19 @@ xtomp_headers_move(xtomp_message_t *m, xtomp_session_t *sess) {
 
 
 
-#pragma GCC diagnostic ignored "-Wcast-align"
+/**
+ * @param offset is a byte offset, pointers math must use word size
+ * C can do this with casts but not on ARM
+ */
 static ngx_int_t
 xtomp_headers_line(xtomp_session_t *sess, ngx_table_elt_t *h, ngx_uint_t offset)
 {
-    ngx_table_elt_t  **ph;
+    ngx_table_elt_t  **h_ptr;
 
-    ph = (ngx_table_elt_t **) ((char *) &sess->headers_in + offset);
-
-    if ( *ph == NULL ) {
-        *ph = h;
+    h_ptr = &sess->headers_in.host;
+    h_ptr += (offset / sizeof(ngx_table_elt_t *));
+    if ( *h_ptr == NULL ) {
+        *h_ptr = h;
         xtomp_headers_cpy(h, NULL);
     }
     else {
@@ -395,14 +398,16 @@ xtomp_headers_host(xtomp_session_t *sess, ngx_table_elt_t *h, ngx_uint_t offset)
         return NGX_ERROR;
     }
 
+/*
     if ( sess->headers_in.server.len ) {
         return NGX_OK;
     }
 
     sess->headers_in.server = host;
-
+*/
     return NGX_OK;
 }
+
 
 static ngx_int_t
 xtomp_headers_login(xtomp_session_t *sess, ngx_table_elt_t *h, ngx_uint_t offset)

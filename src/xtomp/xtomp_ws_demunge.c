@@ -34,11 +34,17 @@ xtomp_ws_demunge_frame(xtomp_session_t *s, u_char *pos)
         // if this is a FIN text frame
         if ( s->ws->opcode == 0x81 ) {
             // if we did process at least one char (so p-1 is valid)
-            // and the end char of the ws frame is not '\0', i.e a valid STOMP frame
+            // and the end char of the ws frame is not '\0', i.e a valid STOMP frame, or '\n' a heart-beat
             // fail fast.
-            if ( p != pos && *(p - 1) != '\0' ) {
-                ngx_log_debug0(NGX_LOG_DEBUG_XTOMP, s->connection->log, 0, "xtomp ws frame not message");
-                return NGX_ERROR;
+            if ( p != pos ) {
+                if ( s->ws->frame_len == 1 && *(p - 1) == '\n' ) {
+                    // heart beat
+                    ngx_log_debug0(NGX_LOG_DEBUG_XTOMP, s->connection->log, 0, "xtomp ws ecg");
+                }
+                else if ( *(p - 1) != '\0' ) {
+                    ngx_log_debug0(NGX_LOG_DEBUG_XTOMP, s->connection->log, 0, "xtomp ws");
+                    return NGX_ERROR;
+                }
             }
         }
     }

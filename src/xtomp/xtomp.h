@@ -56,6 +56,13 @@
 
 // For now the only protocol, 1.2
 #define XTOMP_STOMP_PROTOCOL  0
+// change this and change the hardcoded strings in xtomp_response.c and version file
+#define XTOMP_VERSION_MAJOR   0
+#define XTOMP_VERSION_MINOR   1
+
+
+// trusted port for admin type stuff
+#define XTOMP_TRUSTED_PORT              61616
 
 // Limits
 #define XTOMP_LC_HEADER_LEN             32
@@ -203,18 +210,19 @@ typedef enum {
 } xtomp_filter_flag_e;
 
 struct xtomp_core_dest_conf_s {
+    xtomp_core_srv_conf_t  *cscf;         // core server config towhich this destination belongs
     ngx_str_t               name;
     ngx_uint_t              max_connections;
     ngx_uint_t              max_messages;     // max undelivered messages
     ngx_uint_t              max_message_size; // max size of uploaded message body
     ngx_uint_t              min_delivery;     // min times a message must be delivered to consider it sent, 0 disables holding on to messages for-redelivery
-    ngx_msec_t              expiry;
+    ngx_msec_t              expiry;       // timediff in millis
     ngx_str_t               filter;       // filter messages on topics based on headers
     ngx_str_t               filter_hdr;   // name of the header used for filtering
     ngx_str_t               no_subs;      // what to when a message arrives and there are no subscribers
-    ngx_str_t               stats;        // weather to debug log destination size
-    ngx_str_t               web_write_block;        // weather to debug log destination size
-    ngx_str_t               web_read_block;        // weather to debug log destination size
+    ngx_str_t               stats;        // whether to debug log destination size
+    ngx_str_t               web_write_block;       // whether to debug log destination size
+    ngx_str_t               web_read_block;        // whether to debug log destination size
     void                  **dest_conf;
     ngx_str_t               log_messages;
 
@@ -252,12 +260,6 @@ typedef enum {
 } xtomp_conn_state_e;
 
 
-typedef struct {
-    ngx_peer_connection_t   upstream;
-    ngx_buf_t              *buffer;
-} xtomp_proxy_ctx_t;
-
-
 struct xtomp_headers_in_s {
 
     ngx_table_elt_t                  *host;
@@ -271,9 +273,6 @@ struct xtomp_headers_in_s {
     ngx_table_elt_t                  *id;
 
     ngx_table_elt_t                  *user_def[XTOMP_MAX_HDRS];
-
-    ngx_str_t                         server;
-
 };
 
 
@@ -316,7 +315,7 @@ struct xtomp_ws_ctx_s {
     ngx_uint_t              hdr_write_len;   // length of buffer written
 
     u_char                 *accept;          // base64 accept header response (xtomp_malloced)
-    unsigned                hdr_upgrade:1;
+    unsigned                hdr_upgrade:1;   // flags indicating given header was provided
     unsigned                hdr_host:1;
     unsigned                hdr_connection:1;
     unsigned                hdr_protocol:1;
@@ -329,7 +328,8 @@ struct xtomp_ws_ctx_s {
 
 
 typedef struct {
-    uint32_t                signature;         /* "STOMP" */
+    xtomp_headers_in_t      headers_in;    // Headers received from client
+    uint32_t                signature;         /* "STMP" */
 
     ngx_uint_t              id;
     ngx_connection_t       *connection;
@@ -338,21 +338,25 @@ typedef struct {
     ngx_buf_t              *buffer;    // input buffer
     u_char                 *bufout;    // output buffer
 
-    void                  **ctx;       // config context
+//    void                  **ctx;       // config context
     void                  **main_conf; // xtomp{} config block
     void                  **srv_conf;  // server{} config block
-
-    ngx_resolver_ctx_t     *resolver_ctx;
-
-    xtomp_proxy_ctx_t      *proxy;
 
     ngx_uint_t              xtomp_state;      // connection state
 
     unsigned                protocol:3;
     unsigned                blocked:1;        // read was blocked
     unsigned                quit:1;           // close connection at next opportunity
-    unsigned                invalid_header:1;
+    unsigned                invalid_header:1; //
     unsigned                trusted:1;        // trusted session, meaning not from internet or out of server owners control
+    unsigned                web:1;            // port used is web like (80 81 or 8080)
+    unsigned                res1:1;            // reserved for future use
+    unsigned                res2:1;            // port used is web like (80 81 or 8080)
+    unsigned                usr1:1;            // user flags for extensions
+    unsigned                usr2:1;            //
+    unsigned                usr3:1;            //
+    unsigned                usr4:1;            //
+
 
     ngx_str_t              *addr_text;
     ngx_str_t               host;
@@ -371,9 +375,10 @@ typedef struct {
     xtomp_subscriber_t     *subs[XTOMP_MAX_SUBS];  // slots for subscriptions to destinations
     ngx_uint_t              subs_size;             // number of subscriptions
 
-    xtomp_headers_in_t      headers_in;    // Headers received from client
-    xtomp_ws_ctx_t         *ws;            // WebSocket context
-    unsigned                ws_demunge:1;  // do demunging i,e, we have read all the plain HTTP stuff and upgraded
+    xtomp_ws_ctx_t         *ws;            // WebSocket context or NULL
+    unsigned                ws_demunge:1;       // do demunging i.e. we have read all the plain HTTP stuff and upgraded
+    // WTF I tried moving this bit field to xtomp_ws_ctx_t it breaks if I use the syntax s->ws->demunge = 1;
+
     /* used to parse STOMP headers */
 
     ngx_uint_t              header_hash;       // hashcode of header being read
@@ -404,10 +409,10 @@ struct xtomp_subscriber_s {
     ngx_table_elt_t            *filter;    // memory owned by sub
 
     ngx_int_t                   id;        // subscription id
+    ngx_uint_t                  last_msg;  // TODO last fully delivered message
+    time_t                      timestamp; // start time
     unsigned                    ack:2;     // auto|client|client-individual
     unsigned                    gone:1;    // 1 = client has disconnected
-    ngx_msec_t                  timestamp; // start time
-    ngx_uint_t                  last_msg;  // TODO last fully delivered message
 
     xtomp_subscriber_t         *prev;
     xtomp_subscriber_t         *next;
@@ -439,8 +444,8 @@ struct xtomp_message_chunk_s {
 struct xtomp_message_s {
     ngx_uint_t                   id;           // incrementing index
     ngx_str_t                   *destination;  // destination name + probably need vhost name too
-    ngx_msec_t                   timestamp;    // time the message was created
-    ngx_msec_t                   expiry;       // optional, time after which we can defo delete it
+    time_t                       timestamp;    // time the message was created (seconds from epoc)
+    time_t                       expiry;       // expiry time in (seconds from epoc)
     off_t                        length;       // full length of message
     ngx_table_elt_t             *hdrs[XTOMP_MAX_HDRS];
 
@@ -518,12 +523,13 @@ typedef struct {
 #define xtomp_conf_get_module_srv_conf(cf, module)  ((xtomp_conf_ctx_t *) cf->ctx)->srv_conf[module.ctx_index]
 #define xtomp_conf_get_module_dest_conf(cf, module) ((xtomp_conf_ctx_t *) cf->ctx)->dest_conf[module.ctx_index]
 
-
+void xtomp_increment(void);
+void xtomp_decrement(void);
 
 void xtomp_init_connection(ngx_connection_t *c);
 void xtomp_send(ngx_event_t *wev);
-ngx_int_t xtomp_read_command(xtomp_session_t *s, ngx_connection_t *c);
-void xtomp_close_connection(ngx_connection_t *c);
+ngx_int_t xtomp_read_command(xtomp_session_t *s, ngx_connection_t *conn);
+void xtomp_close_connection(ngx_connection_t *conn);
 u_char *xtomp_log_error(ngx_log_t *log, u_char *buf, size_t len);
 
 //ngx_int_t xtomp_destination_add(ngx_conf_t *cf, ngx_queue_t **destinations, xtomp_core_dest_conf_t *cdcf);
@@ -572,6 +578,7 @@ ngx_int_t xtomp_destination_deliver(xtomp_core_dest_conf_t *dest, xtomp_subscrib
 xtomp_core_dest_conf_t* xtomp_destination_find(xtomp_core_srv_conf_t  *cscf, ngx_str_t *dest_name);
 void xtomp_destination_clean_handler(ngx_event_t *clean_evt);
 ngx_int_t xtomp_destination_logger(xtomp_core_dest_conf_t  *dest);
+ngx_int_t xtomp_destination_logger_cc(ngx_log_t *log);
 ngx_int_t xtomp_destination_check_write(xtomp_session_t *sess, ngx_str_t *dest_name);
 
 
@@ -667,11 +674,14 @@ size_t xtomp_ws_frame_hdr(u_char *buf, size_t message_len, xtomp_frame_type_e ty
 u_char * xtomp_base64(u_char *src, size_t len, size_t *out_len);
 
 
-extern ngx_uint_t     xtomp_max_module;
-extern ngx_module_t   xtomp_module;
-extern ngx_module_t   xtomp_core_module;
-extern xtomp_header_t xtomp_headers_in[];
-extern xtomp_header_t xtomp_ws_headers_in[];
+extern ngx_uint_t               xtomp_max_module;
+extern ngx_module_t             xtomp_module;
+extern ngx_module_t             xtomp_core_module;
+extern xtomp_header_t           xtomp_headers_in[];
+extern xtomp_header_t           xtomp_ws_headers_in[];
+extern ngx_uint_t               xtomp_total;
+extern ngx_uint_t               xtomp_count;
+extern xtomp_core_srv_conf_t   *xtomp_core_conf;
 
 
 #endif /* _XTOMP_H_INCLUDED_ */

@@ -28,12 +28,12 @@ xtomp_message_create(xtomp_core_dest_conf_t *dest)
         return NULL;
     }
 
-    // dest is NULL for server generated messages
-    m->timestamp = ngx_current_msec;
+    m->timestamp = ngx_time();
     m->id = 0;
+    // dest is NULL for server generated messages
     if ( dest ) {
         m->destination = &dest->name;
-        m->expiry = m->timestamp + dest->expiry;
+        m->expiry = m->timestamp + dest->expiry / 1000;
     }
     m->chunks = chunk;
     m->defragged = 0;
@@ -46,6 +46,7 @@ xtomp_message_create(xtomp_core_dest_conf_t *dest)
 
 static void xtomp_message_free_chunk(xtomp_message_chunk_t *chunk);
 
+// N.B. this is needed only when ./compile prod is used (-03)
 #pragma GCC diagnostic ignored "-Wstrict-overflow"
 static void
 xtomp_message_free_chunk(xtomp_message_chunk_t *chunk)
@@ -63,6 +64,7 @@ xtomp_message_free_chunk(xtomp_message_chunk_t *chunk)
     xtomp_free(chunk);
 }
 
+#pragma GCC diagnostic ignored "-Wstrict-overflow"
 void
 xtomp_message_free(xtomp_message_t *m)
 {
@@ -155,6 +157,7 @@ xtomp_message_defrag_chunk(xtomp_message_chunk_t  *c, u_char *new_data)
  * After defrag message can not be edited because str.len and content_length no longer equate
  * if returns NGX_ERROR message has not been altered
  */
+#pragma GCC diagnostic ignored "-Wstrict-overflow"
 ngx_int_t
 xtomp_message_defrag(xtomp_message_t *m_to, xtomp_message_t *m_from)
 {

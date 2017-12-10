@@ -17,17 +17,58 @@
 #include <ngx_event.h>
 #include <xtomp.h>
 
-static void xtomp_init_session(ngx_connection_t *c);
+static void xtomp_init_session(ngx_connection_t *conn);
+
+struct sockaddr_in_header {
+    sa_family_t    sin_family; /* address family: AF_INET */
+    in_port_t      sin_port;   /* port in network byte order */
+};
+
+/**
+ * get port by copying the struct from ngx_connection_t needed for ARM
+ * to workaround pointer alignment issues.
+ */
+static unsigned short 
+xtomp_get_port(ngx_connection_t *conn)
+{
+    struct sockaddr_in_header   sinh;
+    unsigned short              sin_port;
+
+    memcpy(&sinh, conn->local_sockaddr, sizeof(struct sockaddr_in_header));
+    sin_port = ntohs(sinh.sin_port);
+
+    return sin_port;
+}
+
+static ngx_uint_t 
+xtomp_is_trusted_port(unsigned short sin_port)
+{
+
+    if ( sin_port == XTOMP_TRUSTED_PORT ) {
+        return 1;
+    }
+
+    return 0;
+}
+
+static ngx_uint_t 
+xtomp_is_web_port(unsigned short sin_port)
+{
+
+    if ( sin_port == 80 || sin_port == 81 || ( sin_port >= 8000 && sin_port <= 8099 ) ) {
+        return 1;
+    }
+
+    return 0;
+}
 
 /*
  * Set into ngx_listening_t->handler in xtomp_optimize_servers()
  */
 #pragma GCC diagnostic ignored "-Wcast-align"
 void
-xtomp_init_connection(ngx_connection_t *c)
+xtomp_init_connection(ngx_connection_t *conn)
 {
-    size_t                  len;
-    ngx_uint_t              i;
     xtomp_port_t           *port;
     struct sockaddr        *sa;
     struct sockaddr_in     *sin;
@@ -41,10 +82,14 @@ xtomp_init_connection(ngx_connection_t *c)
     struct sockaddr_in6    *sin6;
     xtomp_in6_addr_t       *addr6;
 #endif
+    unsigned short          sin_port;
+    ngx_uint_t              i;
+    size_t                  len;
 
+    xtomp_increment();
     /* find the server configuration for the address:port */
 
-    port = c->listening->servers;
+    port = conn->listening->servers;
 
     if (port->naddrs > 1) {
 
@@ -56,12 +101,12 @@ xtomp_init_connection(ngx_connection_t *c)
          * AcceptEx() already gave this address.
          */
 
-        if (ngx_connection_local_sockaddr(c, NULL, 0) != NGX_OK) {
-            xtomp_close_connection(c);
+        if (ngx_connection_local_sockaddr(conn, NULL, 0) != NGX_OK) {
+            xtomp_close_connection(conn);
             return;
         }
 
-        sa = c->local_sockaddr;
+        sa = conn->local_sockaddr;
 
         switch (sa->sa_family) {
 
@@ -103,7 +148,7 @@ xtomp_init_connection(ngx_connection_t *c)
         }
 
     } else {
-        switch (c->local_sockaddr->sa_family) {
+        switch (conn->local_sockaddr->sa_family) {
 
 #if (NGX_HAVE_INET6)
         case AF_INET6:
@@ -119,9 +164,9 @@ xtomp_init_connection(ngx_connection_t *c)
         }
     }
 
-    s = ngx_pcalloc(c->pool, sizeof(xtomp_session_t));
+    s = ngx_pcalloc(conn->pool, sizeof(xtomp_session_t));
     if (s == NULL) {
-        xtomp_close_connection(c);
+        xtomp_close_connection(conn);
         return;
     }
 
@@ -132,77 +177,81 @@ xtomp_init_connection(ngx_connection_t *c)
 
     s->addr_text = &addr_conf->addr_text;
 
-    c->data = s;
-    s->connection = c;
+    conn->data = s;
+    s->connection = conn;
 
     cscf = xtomp_get_module_srv_conf(s, xtomp_core_module);
     s->id = cscf->session_count++;
+    sin_port = xtomp_get_port(conn);
+    if ( xtomp_is_trusted_port(sin_port) ) s->trusted = 1;
+    if ( xtomp_is_web_port(sin_port) ) s->web = 1;
 
-    ngx_set_connection_log(c, cscf->error_log);
+    ngx_set_connection_log(conn, cscf->error_log);
 
-    len = ngx_sock_ntop(c->sockaddr, c->socklen, text, NGX_SOCKADDR_STRLEN, 1);
+    len = ngx_sock_ntop(conn->sockaddr, conn->socklen, text, NGX_SOCKADDR_STRLEN, 1);
 
-    ngx_log_error(NGX_LOG_INFO, c->log, 0, "*%uA client %*s connected to %V", c->number, len, text, s->addr_text);
+    ngx_log_error(NGX_LOG_INFO, conn->log, 0, "*%uA client %*s connected to %V", conn->number, len, text, s->addr_text);
 
-    ctx = ngx_palloc(c->pool, sizeof(xtomp_log_ctx_t));
+    ctx = ngx_palloc(conn->pool, sizeof(xtomp_log_ctx_t));
     if (ctx == NULL) {
-        xtomp_close_connection(c);
+        xtomp_close_connection(conn);
         return;
     }
 
-    ctx->client = &c->addr_text;
+    ctx->client = &conn->addr_text;
     ctx->session = s;
 
-    c->log->connection = c->number;
-    c->log->handler = xtomp_log_error;
-    c->log->data = ctx;
-    c->log->action = "reading CONNECT";
+    conn->log->connection = conn->number;
+    conn->log->handler = xtomp_log_error;
+    conn->log->data = ctx;
+    conn->log->action = "reading CONNECT";
 
-    c->log_error = NGX_ERROR_INFO;
+    conn->log_error = NGX_ERROR_INFO;
 
-    xtomp_init_session(c);
+    xtomp_init_session(conn);
 }
 
 static void
-xtomp_init_session(ngx_connection_t *c)
+xtomp_init_session(ngx_connection_t *conn)
 {
     xtomp_session_t        *s;
     xtomp_core_srv_conf_t  *cscf;
 
-    s = c->data;
+    s = conn->data;
 
     cscf = xtomp_get_module_srv_conf(s, xtomp_core_module);
 
     s->protocol = cscf->protocol->type;
 
-    s->ctx = ngx_pcalloc(c->pool, sizeof(void *) * xtomp_max_module);
+/*
+    s->ctx = ngx_pcalloc(conn->pool, sizeof(void *) * xtomp_max_module);
     if ( s->ctx == NULL ) {
         s->quit = 1;
-        xtomp_response_error_general(s, c);
-        xtomp_send(c->write);
+        xtomp_response_error_general(s, conn);
+        xtomp_send(conn->write);
         return;
     }
+*/
 
-    c->read->handler = cscf->protocol->init_protocol;
-    c->read->ready = 0;
+    conn->read->handler = cscf->protocol->init_protocol;
+    conn->read->ready = 0;
 
-    c->write->handler = xtomp_send;
+    conn->write->handler = xtomp_send;
 
-    cscf->protocol->init_session(s, c);
+    cscf->protocol->init_session(s, conn);
 }
 
 static const char response_headers[] = "MESSAGE\nsubscription:%ui\nmessage-id:%ui\ndestination:%V\ncontent-length:%ui\n";
 
 /**
  * write the STOMP headers to the s->bufout buffer,
-
  */
 static ngx_int_t
-xtomp_response_write_headers(xtomp_session_t *s, ngx_connection_t *c, xtomp_message_t *m, xtomp_mq_t *mq, ngx_event_t *wev)
+xtomp_response_write_headers(xtomp_session_t *s, ngx_connection_t *conn, xtomp_message_t *m, xtomp_mq_t *mq, ngx_event_t *wev)
 {
-    size_t                  len, hdr_len, fr_len;
     u_char                 *rc;
     xtomp_core_srv_conf_t  *sscf;
+    size_t                  len, hdr_len, fr_len;
 
     sscf = xtomp_get_module_srv_conf(s, xtomp_core_module);
 
@@ -212,7 +261,7 @@ xtomp_response_write_headers(xtomp_session_t *s, ngx_connection_t *c, xtomp_mess
     hdr_len = xtomp_headers_len(m->hdrs);
 
     if ( len + hdr_len + 1 > sscf->client_bufout_size ) {
-        ngx_log_error(NGX_LOG_EMERG, c->log, 0, "xtomp bufout flup");
+        ngx_log_error(NGX_LOG_EMERG, conn->log, 0, "xtomp bufout flup");
         return NGX_ERROR;
     }
     else {
@@ -245,7 +294,7 @@ xtomp_send(ngx_event_t *wev)
 {
     ngx_int_t                   n;
     ngx_uint_t                  sub_id;
-    ngx_connection_t           *c;
+    ngx_connection_t           *conn;
     xtomp_session_t            *s;
     xtomp_message_t            *m;
     xtomp_subscriber_t         *sub;
@@ -255,14 +304,14 @@ xtomp_send(ngx_event_t *wev)
     ngx_str_t                  *m_str;
     size_t                      len;
 
-    c = wev->data;
-    s = c->data;
+    conn = wev->data;
+    s = conn->data;
 
     if ( wev->timedout ) {
         if ( xtomp_ecg_handle_write_timeout(wev) != NGX_OK ) {
-            ngx_log_error(NGX_LOG_INFO, c->log, NGX_ETIMEDOUT, "xtomp write timeout");
-            c->timedout = 1;
-            xtomp_close_connection(c);
+            ngx_log_error(NGX_LOG_INFO, conn->log, NGX_ETIMEDOUT, "xtomp write timeout");
+            conn->timedout = 1;
+            xtomp_close_connection(conn);
         }
         return;
     }
@@ -275,7 +324,7 @@ xtomp_send(ngx_event_t *wev)
             m = mq->message;
             if ( mq->state == xtomp_mq_new ) {
 
-                if ( xtomp_response_write_headers(s, c, m, mq, wev) != NGX_OK ) {
+                if ( xtomp_response_write_headers(s, conn, m, mq, wev) != NGX_OK ) {
                     if ( mq->dest ) {
                         xtomp_destination_nack(mq->dest, m);
                     }
@@ -347,15 +396,15 @@ xtomp_send(ngx_event_t *wev)
                 }
 
                 xtomp_ecg_set_write_timeout(s, wev);
-//                if ( ngx_handle_write_event(c->write, 0) != NGX_OK ) {
-//                    xtomp_close_connection(c);
+//                if ( ngx_handle_write_event(conn->write, 0) != NGX_OK ) {
+//                    xtomp_close_connection(conn);
 //                    return;
 //                }
 
                 // TODO can we do this here, can only call xtomp_close_connection
                 // when there are no pending calls to xtomp_send()
                 if ( s->quit ) {
-                    xtomp_close_connection(c);
+                    xtomp_close_connection(conn);
                 }
 
                 return;
@@ -365,23 +414,23 @@ xtomp_send(ngx_event_t *wev)
         }
 
         else {
-            // send caleld with no data to write
+            // send called with no data to write
             if ( s->quit ) {
-                xtomp_close_connection(c);
+                xtomp_close_connection(conn);
                 return;
             }
             xtomp_ecg_set_write_timeout(s, wev);
             return;
-//            if (ngx_handle_write_event(c->write, 0) != NGX_OK || s->quit) {
-//                xtomp_close_connection(c);
+//            if (ngx_handle_write_event(conn->write, 0) != NGX_OK || s->quit) {
+//                xtomp_close_connection(conn);
 //                return;
 //            }
         }
     }
 
-    // if ( s->out.data[s->out.len - 1] != '\0' ) ngx_log_debug(NGX_LOG_DEBUG_XTOMP, c->log, 0, "xtomp SEND not zero terminated");
+    // if ( s->out.data[s->out.len - 1] != '\0' ) ngx_log_debug(NGX_LOG_DEBUG_XTOMP, conn->log, 0, "xtomp SEND not zero terminated");
 
-    n = c->send(c, s->out.data, s->out.len);
+    n = conn->send(conn, s->out.data, s->out.len);
 
     if ( n > 0 ) {
         s->out.data += n;
@@ -417,19 +466,19 @@ xtomp_send(ngx_event_t *wev)
         xtomp_ecg_set_write_timeout(s, wev);
 
         if ( s->quit ) {
-            xtomp_close_connection(c);
+            xtomp_close_connection(conn);
             return;
         }
 
         if ( s->blocked ) {
-            c->read->handler(c->read);
+            conn->read->handler(conn->read);
         }
 
         return;
     }
 
     if ( n == NGX_ERROR ) {
-        xtomp_close_connection(c);
+        xtomp_close_connection(conn);
         return;
     }
 
@@ -439,37 +488,37 @@ again:
 
     cscf = xtomp_get_module_srv_conf(s, xtomp_core_module);
 
-    ngx_add_timer(c->write, cscf->timeout);
+    ngx_add_timer(conn->write, cscf->timeout);
 
-    if ( ngx_handle_write_event(c->write, 0) != NGX_OK ) {
-        xtomp_close_connection(c);
+    if ( ngx_handle_write_event(conn->write, 0) != NGX_OK ) {
+        xtomp_close_connection(conn);
         return;
     }
-    ngx_log_debug2(NGX_LOG_DEBUG_XTOMP, c->log, 0, "xtomp LOOP %i:%i", s->out.len, s->mq_size);
+    ngx_log_debug2(NGX_LOG_DEBUG_XTOMP, conn->log, 0, "xtomp LOOP %i:%i", s->out.len, s->mq_size);
 }
 
 /*
  * fill the s->buffer and parse it until we get a valid command.
  */
 ngx_int_t
-xtomp_read_command(xtomp_session_t *s, ngx_connection_t *c)
+xtomp_read_command(xtomp_session_t *s, ngx_connection_t *conn)
 {
-    ssize_t                 n;
-    ngx_int_t               rc;
-    xtomp_core_srv_conf_t  *cscf;
     u_char                 *recv_start;
+    xtomp_core_srv_conf_t  *cscf;
+    ngx_int_t               rc, is_heart_beat;
+    ssize_t                 n;
 
     recv_start = s->buffer->last;
-    n = c->recv(c, s->buffer->last, s->buffer->end - s->buffer->last);
-    
+    n = conn->recv(conn, s->buffer->last, s->buffer->end - s->buffer->last);
+
     if ( n == NGX_ERROR ) {
-        ngx_log_debug0(NGX_LOG_DEBUG_XTOMP, c->log, 0, "xtomp recv err");
-        xtomp_close_connection(c);
+        ngx_log_debug0(NGX_LOG_DEBUG_XTOMP, conn->log, 0, "xtomp recv err");
+        xtomp_close_connection(conn);
         return NGX_ERROR;
     }
     if ( n == 0 ) {
         // this is an explicit TCP connection close from the client
-        xtomp_close_connection(c);
+        xtomp_close_connection(conn);
         return NGX_ERROR;
     }
 
@@ -479,9 +528,9 @@ xtomp_read_command(xtomp_session_t *s, ngx_connection_t *c)
 
 
     cscf = xtomp_get_module_srv_conf(s, xtomp_core_module);
-
     // WEBSOCKETS:
     if ( cscf->websockets ) {
+
         // if we were interrupted parsing GET, continue
         if ( s->command == STOMP_WS_GET ) {
             rc = xtomp_ws_parse_upgrade(s);
@@ -505,7 +554,7 @@ xtomp_read_command(xtomp_session_t *s, ngx_connection_t *c)
 
         // If this is brand new connection and its a GET
         else if ( s->xtomp_state == xtomp_conn_start && s->buffer->last - s->buffer->start > 2 && ngx_strncmp(s->buffer->start, "GET", 3) == 0 ) {
-            ngx_log_debug0(NGX_LOG_DEBUG_XTOMP, c->log, 0, "xtomp http GET");
+            ngx_log_debug0(NGX_LOG_DEBUG_XTOMP, conn->log, 0, "xtomp http GET");
             s->xtomp_state = xtomp_conn_initial;
             s->ws = ngx_pcalloc(s->connection->pool, sizeof(xtomp_ws_ctx_t));
             if ( s->ws == NULL ) {
@@ -538,37 +587,44 @@ xtomp_read_command(xtomp_session_t *s, ngx_connection_t *c)
         }
 
         // Otherwise, if this is a ws connection, demunge the data so that we can read it as text
-        // BUG if the packet contains more than one STOMP command, this runs twice, mangling the data
-        else if ( s->ws && s->ws_demunge ) {
-            rc = xtomp_ws_demunge(s, recv_start);
-            if ( rc != NGX_OK ) {
-                ngx_log_debug0(NGX_LOG_DEBUG_XTOMP, c->log, 0, "xtomp demunge err");
-                s->quit = 1;
-                xtomp_send(s->connection->write);
-                return NGX_ERROR;
+        else if ( s->ws != NULL ) {
+            if ( s->ws_demunge == 1 ) {
+                rc = xtomp_ws_demunge(s, recv_start);
+                if ( rc != NGX_OK ) {
+                    ngx_log_debug0(NGX_LOG_DEBUG_XTOMP, conn->log, 0, "xtomp demunge err");
+                    s->quit = 1;
+                    xtomp_send(s->connection->write);
+                    return NGX_ERROR;
+                }
             }
         }
     }
 
     // BUG a single \n is not necessarily a heartbeat
     /* handle heart beats TODO move to ecg.c?  */
-    if ( s->heart_beat_read && s->buffer->start == s->buffer->last - 1 && *s->buffer->start == '\n' ) {
-        if ( ngx_handle_read_event(c->read, 0) != NGX_OK ) {
+    is_heart_beat = 0;
+    if ( s->ws != NULL ) {
+        if ( s->heart_beat_read && s->buffer->pos == s->buffer->last - 1 && *s->buffer->pos == '\n' ) is_heart_beat = 1;
+    } else {
+        if ( s->heart_beat_read && s->buffer->start == s->buffer->last - 1 && *s->buffer->start == '\n' ) is_heart_beat = 1;
+    }
+    if ( is_heart_beat ) {
+        if ( ngx_handle_read_event(conn->read, 0) != NGX_OK ) {
             s->quit = 1;
-            xtomp_response_error_general(s, c);
+            xtomp_response_error_general(s, conn);
             xtomp_send(s->connection->write);
             return NGX_ERROR;
         }
-        ngx_log_debug0(NGX_LOG_DEBUG_XTOMP, c->log, 0, "xtomp heart-beat");
-        xtomp_ecg_set_read_timeout(s, c->read);
+        ngx_log_debug0(NGX_LOG_DEBUG_XTOMP, conn->log, 0, "xtomp ecg in");
+        xtomp_ecg_set_read_timeout(s, conn->read);
         s->buffer->last--;
         return NGX_DONE;
     }
 
     if ( n == NGX_AGAIN ) {
-        if ( ngx_handle_read_event(c->read, 0) != NGX_OK ) {
+        if ( ngx_handle_read_event(conn->read, 0) != NGX_OK ) {
             s->quit = 1;
-            xtomp_response_error_general(s, c);
+            xtomp_response_error_general(s, conn);
             xtomp_send(s->connection->write);
             return NGX_ERROR;
         }
@@ -586,7 +642,7 @@ xtomp_read_command(xtomp_session_t *s, ngx_connection_t *c)
             return rc;
         }
 
-        ngx_log_error(NGX_LOG_INFO, c->log, 0, "xtomp long command");
+        ngx_log_error(NGX_LOG_INFO, conn->log, 0, "xtomp long command");
 
         s->quit = 1;
 
@@ -602,7 +658,7 @@ xtomp_read_command(xtomp_session_t *s, ngx_connection_t *c)
     }
 
     if ( rc == NGX_ERROR ) {
-        xtomp_close_connection(c);
+        xtomp_close_connection(conn);
         return NGX_ERROR;
     }
 
@@ -610,7 +666,7 @@ xtomp_read_command(xtomp_session_t *s, ngx_connection_t *c)
 }
 
 void
-xtomp_close_connection(ngx_connection_t *c)
+xtomp_close_connection(ngx_connection_t *conn)
 {
     ngx_pool_t             *pool;
     xtomp_core_dest_conf_t *dest;
@@ -619,8 +675,8 @@ xtomp_close_connection(ngx_connection_t *c)
     xtomp_subscriber_t     *sub;
     ngx_uint_t              sub_id;
 
-    sess = c->data;
-    ngx_log_debug1(NGX_LOG_DEBUG_XTOMP, c->log, 0, "xtomp close conn: %d", c->fd);
+    sess = conn->data;
+    ngx_log_debug1(NGX_LOG_DEBUG_XTOMP, conn->log, 0, "xtomp close conn: %d", conn->fd);
 
 #if (NGX_STAT_STUB)
     (void) ngx_atomic_fetch_add(ngx_stat_active, -1);
@@ -656,11 +712,13 @@ xtomp_close_connection(ngx_connection_t *c)
 
     xtomp_headers_unset(sess); // TODO strange order close then unset?
 
-    pool = c->pool;
+    pool = conn->pool;
 
-    ngx_close_connection(c);
+    ngx_close_connection(conn);
 
     ngx_destroy_pool(pool);
+
+    xtomp_decrement();
 }
 
 
@@ -672,29 +730,15 @@ xtomp_log_error(ngx_log_t *log, u_char *buf, size_t len)
     xtomp_log_ctx_t  *ctx;
 
     p = buf;
-/*
-    if ( log->action ) {
-        p = ngx_snprintf(buf, len, " while %s", log->action);
-        len -= p - buf;
-        buf = p;
-    }
-*/
+
     ctx = log->data;
-/*
-    p = ngx_snprintf(buf, len, ", client: %V", ctx->client);
-    len -= p - buf;
-    buf = p;
-*/
+
     sess = ctx->session;
 
     if ( sess == NULL ) {
         return p;
     }
-/*
-    p = ngx_snprintf(buf, len, ", server: %V", sess->addr_text);
-    len -= p - buf;
-    buf = p;
-*/
+
     if ( sess->login.len == 0 ) {
         return p;
     }

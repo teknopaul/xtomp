@@ -11,7 +11,7 @@
 #include <xtomp.h>
 #include "xtomp_hashmap.h"
 
-// TODO this should all be in destination.
+// TODO this should all be in destination. or called xtomp_destination_filter.c
 
 
 
@@ -78,6 +78,7 @@ xtomp_destination_create_subscription(xtomp_core_dest_conf_t *dest, xtomp_sessio
     sub->sess = sess;
     sub->id = id;
     sub->ack = ack;
+    sub->timestamp = ngx_time();
 
     ngx_table_elt_t  *hdr;
     for ( i = 0 ; i < XTOMP_MAX_HDRS ; i++ ) {

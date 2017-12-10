@@ -149,6 +149,11 @@ install:	build $NGX_INSTALL_PERL_MODULES
 		|| cp conf/xtomp.conf '\$(DESTDIR)$NGX_CONF_PREFIX'
 	cp conf/xtomp.conf '\$(DESTDIR)$NGX_CONF_PREFIX/xtomp.conf.default'
 
+	
+	test -f '/etc/xtomp.conf' \\
+		|| cp conf/xtomp.conf '/etc/xtomp.conf'
+		
+	cp conf/xtomp.conf '\$(DESTDIR)$NGX_CONF_PREFIX/xtomp.conf.default'
 #	test -f '\$(DESTDIR)$NGX_CONF_PREFIX/http.conf' \\
 #		|| cp conf/http.conf '\$(DESTDIR)$NGX_CONF_PREFIX'
 #	cp conf/http.conf '\$(DESTDIR)$NGX_CONF_PREFIX/http.conf.default'
@@ -163,6 +168,8 @@ install:	build $NGX_INSTALL_PERL_MODULES
 
 	test -d '\$(DESTDIR)`dirname "$NGX_HTTP_LOG_PATH"`' \\
 		|| mkdir -p '\$(DESTDIR)`dirname "$NGX_HTTP_LOG_PATH"`'
+	
+	touch /var/log/xtomp /var/spool/xtomp/data
 
 #	test -d '\$(DESTDIR)$NGX_PREFIX/html' \\
 #		|| cp -R $NGX_HTML '\$(DESTDIR)$NGX_PREFIX'

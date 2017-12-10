@@ -477,7 +477,7 @@ xtomp_request_parse_command(xtomp_session_t *s)
             goto invalid;
 
         default:
-            ngx_log_debug0(NGX_LOG_DEBUG_XTOMP, s->connection->log, 0, "xtomp BUG unhandles switch");
+            ngx_log_debug0(NGX_LOG_DEBUG_XTOMP, s->connection->log, 0, "xtomp BUG unhandled switch");
             goto invalid;
 
         } // end case

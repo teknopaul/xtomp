@@ -47,5 +47,8 @@ cat << END > Makefile
 default:	build
 
 clean:
-	rm -rf Makefile $NGX_OBJS
+	rm -rf $NGX_OBJS
+	rm -f src/xtomp/test/xtomp_drain.c src/xtomp/test/xtomp_tap.c src/xtomp/test/xtomp_sink.c src/xtomp/test/xtomp_drain src/xtomp/test/xtomp_tap src/xtomp/test/xtomp_sink
+	rm -rf deploy/root deploy/root-github
+	rm -rf Makefile
 END

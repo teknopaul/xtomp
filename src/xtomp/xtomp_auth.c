@@ -211,15 +211,12 @@ xtomp_auth_timeout(ngx_str_t login, ngx_uint_t secret_timeout)
         timestamp = ngx_atoi(start, end - start);
         if ( timestamp == NGX_ERROR ) return NGX_ERROR;
 
-        // should not happen if computers dates are in sync
+        // should not happen if computer's dates are in sync
         if (now < (time_t)timestamp) return NGX_OK;
 
-        if ( (now - (time_t)timestamp) < (time_t)secret_timeout) {
-            return NGX_OK;
-        }
-        else {
-            return NGX_DECLINED;
-        }
+        if ( (now - (time_t)timestamp) < (time_t)secret_timeout) return NGX_OK;
+
+        return NGX_DECLINED;
 
     }
 

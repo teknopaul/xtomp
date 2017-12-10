@@ -23,7 +23,12 @@ static char *xtomp_core_destination(ngx_conf_t *cf, ngx_command_t *cmd, void *co
 static ngx_int_t xtomp_init_process(ngx_cycle_t *cycle);
 static char *xtomp_core_error_log(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 
-ngx_uint_t init_log;
+// there can be only one
+xtomp_core_srv_conf_t  *xtomp_core_conf;
+
+ngx_uint_t              xtomp_total;
+ngx_uint_t              xtomp_count;
+ngx_uint_t              init_log;
 
 static ngx_command_t  xtomp_core_commands[] = {
 
@@ -288,7 +293,6 @@ ngx_module_t  xtomp_core_module = {
     NGX_MODULE_V1_PADDING
 };
 
-static xtomp_core_srv_conf_t *xtomp_core_conf;
 
 static void *
 xtomp_core_create_main_conf(ngx_conf_t *cf)
@@ -906,6 +910,7 @@ xtomp_core_destination(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     cscf = conf;
     cscf->destinations[cscf->destination_count++] = cdcf;
+    cdcf->cscf = cscf;
 
     return rv;
 }
@@ -917,7 +922,9 @@ xtomp_init_process(ngx_cycle_t *cycle)
     ngx_uint_t                i;
     xtomp_core_srv_conf_t    *cscf;
     xtomp_core_dest_conf_t   *dest;
+    ngx_log_t                *log;
 
+    log = NULL;
     cscf = xtomp_core_conf; // Only support one stomp{} block
 
     for ( i = 0 ; i < cscf->destination_count ; i++ ) {
@@ -926,8 +933,32 @@ xtomp_init_process(ngx_cycle_t *cycle)
 
         if ( dest != NULL && dest->stats.len && ngx_strcmp(dest->stats.data, "on") == 0 ) {
             xtomp_destination_logger(dest);
+            if ( ! log ) log =  dest->log;
         }
     }
 
+    xtomp_total = 0;
+    xtomp_count = 0;
+    if ( log ) {
+        xtomp_destination_logger_cc(log);
+    }
+
     return NGX_OK;
+}
+
+/**
+ * Connection counting
+ */
+
+void
+xtomp_decrement(void)
+{
+    xtomp_count--;
+}
+
+void
+xtomp_increment(void)
+{
+    xtomp_total++;
+    xtomp_count++;
 }

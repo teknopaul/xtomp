@@ -11,6 +11,8 @@
 #include <ngx_event.h>
 #include <xtomp.h>
 
+static const char XTOMP_LOG_PERSIST_DIRECTORY[] = "/var/spool/xtomp/data/";
+
 
 
 #define XTOMP_LOG_MSG_OVERHEAD      200
@@ -18,7 +20,6 @@
 #define XTOMP_LOG_MAX_EVENTS        1024
 #define XTOMP_LOG_MAX_PATH          255
 
-static const char XTOMP_LOG_PERSIST_DIRECTORY[] = "/var/spool/xtomp/data/";
 
 static const char message_headers[] = "message-id:%ui\ndestination:%V\ncontent-length:%ui\n";
 

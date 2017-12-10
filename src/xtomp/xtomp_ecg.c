@@ -29,7 +29,7 @@ xtomp_ecg_connect(xtomp_session_t *s)
     if ( s->headers_in.heart_beat != NULL ) {
         comma = (u_char *)memchr(s->headers_in.heart_beat->value.data, ',', s->headers_in.heart_beat->value.len);
         if ( comma == NULL ) {
-ngx_log_debug0(NGX_LOG_DEBUG_XTOMP, s->connection->log, 0, "xtomp HERERER1");
+            ngx_log_debug0(NGX_LOG_DEBUG_XTOMP, s->connection->log, 0, "xtomp ecg syntax");
             return NGX_ERROR;
         }
         cpos = comma - s->headers_in.heart_beat->value.data;
@@ -41,7 +41,7 @@ ngx_log_debug0(NGX_LOG_DEBUG_XTOMP, s->connection->log, 0, "xtomp HERERER1");
         }
         else if ( cx > sscf->heart_beat_read ) {
             // error client can only guarantee beats every cx but we need beats every sscf->heart_beat_read
-ngx_log_debug0(NGX_LOG_DEBUG_XTOMP, s->connection->log, 0, "xtomp HERERER2");
+            ngx_log_debug0(NGX_LOG_DEBUG_XTOMP, s->connection->log, 0, "xtomp ecg incompat");
             return NGX_ERROR;
         }
         else {
@@ -52,7 +52,7 @@ ngx_log_debug0(NGX_LOG_DEBUG_XTOMP, s->connection->log, 0, "xtomp HERERER2");
             s->heart_beat_write = 0;
         }
         else if ( cy < sscf->heart_beat_write_min ) {
-ngx_log_debug0(NGX_LOG_DEBUG_XTOMP, s->connection->log, 0, "xtomp HERERER3");
+            ngx_log_debug0(NGX_LOG_DEBUG_XTOMP, s->connection->log, 0, "xtomp ecg incompat");
             return NGX_ERROR;
         }
         else if ( cy > sscf->heart_beat_write_max ) {
@@ -64,7 +64,7 @@ ngx_log_debug0(NGX_LOG_DEBUG_XTOMP, s->connection->log, 0, "xtomp HERERER3");
 
     }
     else {
-        ngx_log_debug0(NGX_LOG_DEBUG_XTOMP, s->connection->log, 0, "xtomp heart-beat defaults");
+        ngx_log_debug0(NGX_LOG_DEBUG_XTOMP, s->connection->log, 0, "xtomp ecg defaults");
         s->heart_beat_read = sscf->heart_beat_read;
         s->heart_beat_write = sscf->heart_beat_write_max;
     }

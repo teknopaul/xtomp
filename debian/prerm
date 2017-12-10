@@ -1,0 +1,8 @@
+#!/bin/sh
+#
+# remove the xtomp user, not the group other debs might need it
+#
+grep ^xtomp: /etc/passwd >/dev/null && userdel xtomp
+
+systemctl daemon-reload
+exit 0
