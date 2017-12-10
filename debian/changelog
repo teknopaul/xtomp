@@ -1,7 +1,5 @@
-xtomp (0.1) UNRELEASED; urgency=low
+xtomp (0.1) unstable; urgency=low
 
-   * Initial Release. Closes: #12345
    * This is my first Debian package.
-   * Adjusted the Makefile to fix $(DESTDIR) problems.
 
   -- teknopaul <me@teknopaul.com>  Sun, 10 Dec 2017 00:10:00 +0100
