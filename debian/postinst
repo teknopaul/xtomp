@@ -11,7 +11,7 @@ touch /var/log/xtomp/error.log
 chown xtomp /var/log/xtomp/error.log
 
 mkdir -p /var/spool/xtomp/
-chown xtomp.xtomp /var/spool/xtomp/
+chown xtomp:xtomp /var/spool/xtomp/
 chmod 770 /var/spool/xtomp/
 
 systemctl daemon-reload
