@@ -7,6 +7,10 @@ cd $(dirname $0)
 
 
 args='--with-xtomp --without-http'
+
+#
+# nginx defaults to /usr/local so we do too
+#
 opts='--prefix=/usr/local/xtomp
         --sbin-path=/usr/local/xtomp/bin/xtomp
         --modules-path=/usr/local/xtomp/modules
@@ -17,24 +21,24 @@ opts='--prefix=/usr/local/xtomp
         --user=xtomp
         --group=xtomp'
 
-snapopts='--prefix=/usr/local/xtomp
-        --sbin-path=/usr/local/xtomp/bin/xtomp
-        --modules-path=/usr/local/xtomp/modules
+#
+# debian forbids /usr/local
+#
+debopts='--prefix=/usr/lib/xtomp
+        --sbin-path=/usr/lib/xtomp/bin/xtomp
+        --modules-path=/usr/lib/xtomp/modules
         --conf-path=/etc/xtomp.conf
-        --error-log-path=/var/snap/xtomp/error.log
-        --pid-path=/var/snap/xtomp/xtomp.pid
-        --lock-path=/var/snap/xtomp
+        --error-log-path=/var/log/xtomp/error.log
+        --pid-path=/var/run/xtomp/xtomp.pid
+        --lock-path=/var/run/xtomp
         --user=xtomp
         --group=xtomp'
 
 deploy/fix-version.sh
 
-if [ $(hostname) == ci ] || [ "$1" == "prod" ]
+if [ "$1" == "debug" ]
 then
-  auto/configure $args $opts --with-cc-opt='-O3'
-elif [ "$1" == "snap" ]
-then
-  auto/configure $args $snapopts --with-cc-opt='-O3'
+  auto/configure $args $opts --with-debug --with-cc-opt='-O3'
 else
-  auto/configure $args --with-debug --with-cc-opt='-O0 -g' $opts
+  auto/configure $args $debopts --with-cc-opt='-O3'
 fi
