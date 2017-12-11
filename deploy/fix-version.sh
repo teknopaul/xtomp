@@ -22,17 +22,22 @@ then
 fi
 
 #
-# PPA build
-#
-if [ -f deploy/xtomp.recipe.in ]
-then
-  sed -e "s/VERSION/$VERSION/" deploy/xtomp.recipe.in > deploy/xtomp.recipe
-fi
-
-#
 # .deb build
 #
 if [ -f deploy/DEBIAN/control.in ]
 then
   sed -e "s/@PACKAGE_VERSION@/${VERSION}/" deploy/DEBIAN/control.in >  deploy/DEBIAN/control
 fi
+
+#
+# github build has deploy/debian in lowercase to differentiate
+#
+if [ -f deploy/debian/control.in ]
+then
+  . deploy/ppa-version
+
+  sed -e "s/@PACKAGE_VERSION@/${VERSION}-${PPA_VERSION}/" deploy/debian/control.in >  deploy/debian/control
+  sed -e "s/VERSION/${VERSION}-${PPA_VERSION}/" deploy/xtomp.recipe.in > deploy/xtomp.recipe
+
+fi
+
