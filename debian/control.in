@@ -1,27 +1,24 @@
 Source: xtomp
-Section: unknown
+Section: net
 Priority: optional
 Maintainer: teknopaul <me@teknopaul.com>
-Build-Depends: debhelper (>=10)
-Standards-Version: 4.0.0
-Homepage: http://xtomp.tp23.org
- 
+
 Package: xtomp
 Version: @PACKAGE_VERSION@
-Section: 
-Priority: optional
+Standards-Version: 4.0.0
 Architecture: all
-Essential: no
+Homepage: http://xtomp.tp23.org
+Description: Message Broker with a STOMP API
 Depends: libaio1
+Provides: xtomp
+Installed-Size: @SIZE@
+Essential: no
+Build-Depends: debhelper (>=9)
 Pre-Depends: 
 Recommends: 
 Suggests: 
-Installed-Size: @SIZE@
-Maintainer: teknopaul [teknopaul@tp23.org]
 Conflicts: 
 Replaces: 
-Provides: xtomp
-Description: Message Broker with a STOMP API
 
 
 
