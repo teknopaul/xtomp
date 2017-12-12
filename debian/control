@@ -1,0 +1,10 @@
+Source: xtomp
+Section: net
+Maintainer: teknopaul <me@teknopaul.com>
+Build-Depends: debhelper (>=9), libaio-dev, libssl-dev
+
+Package: xtomp
+Architecture: all
+Description: Message Broker with a STOMP API
+Depends: libaio1
+
