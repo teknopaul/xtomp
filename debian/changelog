@@ -1,3 +1,9 @@
+xtomp (0.2) xenial; urgency=low
+
+  * setting arch any
+
+ -- teknopaul <me@teknopaul.com>  Wed, 13 Dec 2017 23:37:06 +0100
+
 xtomp (0.1) xenial; urgency=low
 
   * This is my first Debian package.
