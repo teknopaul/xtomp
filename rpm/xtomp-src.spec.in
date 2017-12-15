@@ -1,0 +1,50 @@
+Name:    xtomp
+Version: @PACKAGE_VERSION@
+Release: 1%{?dist}
+Summary: A STOMP Message Broker 👢
+
+License: BSD like
+Source0: xtomp-@PACKAGE_VERSION@.tar.gz
+BuildArch: x86_64
+
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
+
+%define debug_package %{nil}
+
+%description
+%{summary}
+
+%prep
+%setup -q
+
+%build
+./configure
+make
+
+%install
+rm -rf %{buildroot}
+PREFIX=%{buildroot}/usr/local make install
+
+# in builddir
+cp -a * %{buildroot}
+
+
+%clean
+rm -rf %{buildroot}
+
+
+%files
+%defattr(-,root,root,-)
+%config(noreplace) %{_sysconfdir}/%{name}.conf
+/usr/local/xtomp/bin/xtomp
+/usr/local/xtomp/bin/xtomp-kill
+/usr/local/xtomp/bin/xtomp-sink
+/usr/local/xtomp/bin/xtomp-drain
+/usr/local/xtomp/bin/xtomp-tap
+/lib/systemd/system/xtomp.service
+/usr/share/man/man8/xtomp.8.gz
+/var/log/xtomp/error.log
+
+%changelog
+* Wed May 10 2017  teknopaul <me@teknopaul.com> 0.2-1
+- First Build

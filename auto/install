@@ -132,11 +132,14 @@ install:	build $NGX_INSTALL_PERL_MODULES
 	test -d '\$(DESTDIR)`dirname "$NGX_HTTP_LOG_PATH"`' \\
 		|| mkdir -p '\$(DESTDIR)`dirname "$NGX_HTTP_LOG_PATH"`'
 	
-	mkdir -p \$(DESTDIR)/var/log/xtomp \$(DESTDIR)/var/spool/xtomp/data \$(DESTDIR)/lib/systemd/system/
+	mkdir -p \$(DESTDIR)/var/log/xtomp \$(DESTDIR)/var/spool/xtomp/data \$(DESTDIR)/lib/systemd/system/ \$(DESTDIR)/usr/share/man/man8
 	
 	test -f '\$(DESTDIR)/lib/systemd/system/xtomp.service' \\
 		|| cp script/xtomp.service '\$(DESTDIR)/lib/systemd/system/xtomp.service'
-
+	
+	test -f '\$(DESTDIR)/usr/share/man/man8/xtomp.8' \\
+		|| cp objs/xtomp.8 '\$(DESTDIR)/usr/share/man/man8/xtomp.8'
+		
 #	test -d '\$(DESTDIR)$NGX_PREFIX/html' \\
 #		|| cp -R $NGX_HTML '\$(DESTDIR)$NGX_PREFIX'
 END
