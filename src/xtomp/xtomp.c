@@ -7,6 +7,9 @@
  * Copyright (C) Teknopaul
  */
 
+#ifdef REDHAT
+#pragma GCC diagnostic ignored "-Wunreachable-code"
+#endif
 
 #include <ngx_config.h>
 #include <ngx_core.h>
@@ -16,7 +19,7 @@
 
 static char *xtomp_init_conf(ngx_cycle_t *cycle, void *conf);
 static char *xtomp_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
-static ngx_int_t xtomp_add_ports(ngx_conf_t *cf, ngx_array_t *ports, xtomp_listen_t *listen);
+static ngx_int_t xtomp_add_ports(ngx_conf_t *cf, ngx_array_t *ports, xtomp_listen_t *x_listen);
 static char *xtomp_optimize_servers(ngx_conf_t *cf, ngx_array_t *ports);
 static ngx_int_t xtomp_add_addrs(ngx_conf_t *cf, xtomp_port_t *mport, xtomp_conf_addr_t *addr);
 #if (NGX_HAVE_INET6)
@@ -80,7 +83,7 @@ xtomp_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ngx_uint_t                i, m, mi, s;
     ngx_conf_t                pcf;
     ngx_array_t               ports;
-    xtomp_listen_t           *listen;
+    xtomp_listen_t           *x_listen;
     xtomp_module_t           *module;
     xtomp_conf_ctx_t         *ctx;
     xtomp_core_srv_conf_t   **cscfp;
@@ -220,10 +223,10 @@ xtomp_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return NGX_CONF_ERROR;
     }
 
-    listen = cmcf->listen.elts;
+    x_listen = cmcf->listen.elts;
 
     for (i = 0; i < cmcf->listen.nelts; i++) {
-        if (xtomp_add_ports(cf, &ports, &listen[i]) != NGX_OK) {
+        if (xtomp_add_ports(cf, &ports, &x_listen[i]) != NGX_OK) {
             return NGX_CONF_ERROR;
         }
     }
@@ -233,8 +236,7 @@ xtomp_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
 
 static ngx_int_t
-xtomp_add_ports(ngx_conf_t *cf, ngx_array_t *ports,
-    xtomp_listen_t *listen)
+xtomp_add_ports(ngx_conf_t *cf, ngx_array_t *ports, xtomp_listen_t *x_listen)
 {
     in_port_t           p;
     ngx_uint_t          i;
@@ -242,7 +244,7 @@ xtomp_add_ports(ngx_conf_t *cf, ngx_array_t *ports,
     xtomp_conf_port_t  *port;
     xtomp_conf_addr_t  *addr;
 
-    sa = &listen->sockaddr.sockaddr;
+    sa = &x_listen->sockaddr.sockaddr;
     p = ngx_inet_get_port(sa);
 
     port = ports->elts;
@@ -280,7 +282,7 @@ found:
         return NGX_ERROR;
     }
 
-    addr->opt = *listen;
+    addr->opt = *x_listen;
 
     return NGX_OK;
 }

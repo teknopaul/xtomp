@@ -19,6 +19,10 @@ sed -i "s/server:xtomp\/[0-9][0-9]*\.[0-9][0-9]*/server:xtomp\/$VERSION/" src/xt
 if [ -f deploy/RPM/xtomp.spec.in ]
 then
   sed -i "s/teknopaul.com> [0-9][0-9]*\.[0-9][0-9]*/teknopaul.com> $VERSION/" deploy/RPM/xtomp.spec.in
+  sed -e "s/@PACKAGE_VERSION@/${VERSION}/" deploy/RPM/xtomp.spec.in > deploy/RPM/xtomp.spec
+
+  sed -i "s/teknopaul.com> [0-9][0-9]*\.[0-9][0-9]*/teknopaul.com> $VERSION/" deploy/RPM/xtomp-src.spec.in
+  sed -e "s/@PACKAGE_VERSION@/${VERSION}/" deploy/RPM/xtomp-src.spec.in > deploy/RPM/xtomp-src.spec
 fi
 
 if [ -f deploy/xtomp.recipe.in ]
