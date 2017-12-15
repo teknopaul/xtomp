@@ -23,24 +23,16 @@ make
 
 %install
 rm -rf %{buildroot}
-PREFIX=%{buildroot}/usr/local make install
-
-# in builddir
-cp -a * %{buildroot}
-
+DESTDIR=%{buildroot} make install
 
 %clean
 rm -rf %{buildroot}
 
-
 %files
 %defattr(-,root,root,-)
 %config(noreplace) %{_sysconfdir}/%{name}.conf
-/usr/local/xtomp/bin/xtomp
-/usr/local/xtomp/bin/xtomp-kill
-/usr/local/xtomp/bin/xtomp-sink
-/usr/local/xtomp/bin/xtomp-drain
-/usr/local/xtomp/bin/xtomp-tap
+/usr/lib/xtomp/bin/xtomp
+/usr/lib/xtomp/bin/xtomp-kill
 /lib/systemd/system/xtomp.service
 /usr/share/man/man8/xtomp.8.gz
 /var/log/xtomp/error.log

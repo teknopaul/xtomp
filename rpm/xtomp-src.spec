@@ -23,7 +23,6 @@ make
 
 %install
 rm -rf %{buildroot}
-mkdir -p %{buildroot}
 DESTDIR=%{buildroot} make install
 
 %clean

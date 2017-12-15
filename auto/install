@@ -140,6 +140,8 @@ install:	build $NGX_INSTALL_PERL_MODULES
 	test -f '\$(DESTDIR)/usr/share/man/man8/xtomp.8' \\
 		|| cp objs/xtomp.8 '\$(DESTDIR)/usr/share/man/man8/xtomp.8'
 		
+	touch \$(DESTDIR)/var/log/xtomp/error.log
+		
 #	test -d '\$(DESTDIR)$NGX_PREFIX/html' \\
 #		|| cp -R $NGX_HTML '\$(DESTDIR)$NGX_PREFIX'
 END
