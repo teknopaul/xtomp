@@ -26,12 +26,15 @@ sed -e "s/@PACKAGE_VERSION@/${VERSION}/" rpm/xtomp-src.spec.in > rpm/xtomp-src.s
 mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 echo '%_topdir %(echo $HOME)/rpmbuild' > ~/.rpmmacros
 
-tar -z -v -c --transform "s,^,xtomp-$VERSION/," -f /root/rpmbuild/SOURCES/xtomp-$VERSION.tar.gz auto conf configure deploy docs lic script src version
+tar -z -v -c --transform "s,^,xtomp-$VERSION/," -f ~/rpmbuild/SOURCES/xtomp-$VERSION.tar.gz auto conf configure deploy docs lic script src version
 
 #
 # Build the .rpm
 #
-rpmbuild -bb rpm/xtomp-src.spec
+rpmbuild -ba rpm/xtomp-src.spec
+
+mv ~/rpmbuild/RPMS/${ARCH}/xtomp-$VERSION-1.el6.${ARCH}.rpm .
+mv ~/rpmbuild/SRPMS/xtomp-$VERSION-1.el6.src.rpm .
 
 test -f ${NAME}-${VERSION}-1.${ARCH}.rpm
 

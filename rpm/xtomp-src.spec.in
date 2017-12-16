@@ -31,6 +31,7 @@ rm -rf %{buildroot}
 %files
 %defattr(-,root,root,-)
 %config(noreplace) %{_sysconfdir}/%{name}.conf
+/etc/xtomp.conf.default
 /usr/lib/xtomp/bin/xtomp
 /usr/lib/xtomp/bin/xtomp-kill
 /lib/systemd/system/xtomp.service
